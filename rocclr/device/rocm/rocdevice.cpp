@@ -2472,10 +2472,18 @@ void* Device::svmAlloc(amd::Context& context, size_t size, size_t alignment, cl_
 
 void* Device::virtualAlloc(void* req_addr, size_t size, size_t alignment) {
   void* vptr = nullptr;
+
+  // YANG'S HACK
+  uint64_t node_id = 0;
+  if (alignment & (1ULL << (sizeof(size_t) * 8 - 1))) {
+    node_id = 1;
+    alignment &= ~(1ULL << (sizeof(size_t) * 8 - 1));
+  }
+
   // Reserves the address using HSA APIs, with requested address.
   // There is no guarantee that we will get the requested address.
   hsa_status_t hsa_status = hsa_amd_vmem_address_reserve(&vptr, size,
-                              reinterpret_cast<uint64_t>(req_addr), 0);
+                              reinterpret_cast<uint64_t>(req_addr), node_id);
   if (hsa_status != HSA_STATUS_SUCCESS) {
     LogPrintfError("Failed hsa_amd_vmem_address_reserve. Failed with status: %d \n", hsa_status);
     return nullptr;

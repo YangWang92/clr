@@ -53,6 +53,10 @@ hipError_t hipMemAddressFree(void* devPtr, size_t size) {
 
 hipError_t hipMemAddressReserve(void** ptr, size_t size, size_t alignment, void* addr,
                                 unsigned long long flags) {
+  // YANG'S HACK
+  uint64_t node_id = flags;
+  flags = 0;
+
   HIP_INIT_API(hipMemAddressReserve, ptr, size, alignment, addr, flags);
 
   if (ptr == nullptr || flags != 0) {
@@ -67,6 +71,15 @@ hipError_t hipMemAddressReserve(void** ptr, size_t size, size_t alignment, void*
 
   // Initialize the ptr, single virtual alloc call would reserve va range for all devices.
   *ptr = nullptr;
+
+  // YANG'S HACK
+  if (node_id == 0) {
+    // set aligment the first bit to 0
+    alignment &= ~(1ULL << (sizeof(size_t) * 8 - 1));
+  }
+  else {
+    alignment |= 1ULL << (sizeof(size_t) * 8 - 1);
+  }
   *ptr = g_devices[0]->devices()[0]->virtualAlloc(addr, size, alignment);
   if (*ptr == nullptr) {
     HIP_RETURN(hipErrorOutOfMemory);
